@@ -179,21 +179,21 @@ func updateScenarioAssets(t *testing.T, state *spendData) {
 	// Assets to cover both asset types and all three asset values.
 	asset1, err := asset.New(
 		state.genesis1, state.normalAmt1, locktime,
-		relLocktime, state.spenderDescriptor, nil,
+		relLocktime, state.spenderDescriptor, nil, nil,
 	)
 	require.NoError(t, err)
 	state.asset1 = *asset1
 
 	asset1CollectFamily, err := asset.New(
 		state.genesis1collect, state.collectAmt, locktime,
-		relLocktime, state.spenderDescriptor, &state.familyKey,
+		relLocktime, state.spenderDescriptor, nil, &state.familyKey,
 	)
 	require.NoError(t, err)
 	state.asset1CollectFamily = *asset1CollectFamily
 
 	asset2, err := asset.New(
 		state.genesis1, state.normalAmt2, locktime,
-		relLocktime, state.spenderDescriptor, nil,
+		relLocktime, state.spenderDescriptor, nil, nil,
 	)
 	require.NoError(t, err)
 	state.asset2 = *asset2

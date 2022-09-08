@@ -246,7 +246,7 @@ func seedlingsToAssetRoot(t *testing.T, genesisPoint wire.OutPoint,
 		}
 
 		newAsset, err := asset.New(
-			assetGen, amount, 0, 0, scriptKey, familyKey,
+			assetGen, amount, 0, 0, scriptKey, nil, familyKey,
 		)
 		require.NoError(t, err)
 

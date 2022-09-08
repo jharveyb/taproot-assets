@@ -72,7 +72,7 @@ func randAsset(t *testing.T, assetType asset.Type,
 	}
 
 	a, err := asset.New(
-		genesis, units, 0, 0, toKeyDesc(&scriptKey), familyKey,
+		genesis, units, 0, 0, toKeyDesc(&scriptKey), nil, familyKey,
 	)
 	require.NoError(t, err)
 	return a

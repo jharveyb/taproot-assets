@@ -230,6 +230,7 @@ func TestPayToAddrScript(t *testing.T) {
 
 	inputAsset1, err := asset.New(
 		genesis1, uint64(normalAmt1), 1, 1, receiver1Descriptor, nil,
+		nil,
 	)
 	require.NoError(t, err)
 	inputAsset1AssetTree, err := commitment.NewAssetCommitment(inputAsset1)
