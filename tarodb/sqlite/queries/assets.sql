@@ -1,8 +1,8 @@
 -- name: UpsertInternalKey :one
 INSERT INTO internal_keys (
-    raw_key, key_family, key_index
+    raw_key, tweak, key_family, key_index
 ) VALUES (
-    ?, ?, ?
+    ?, ?, ?, ?
 ) ON CONFLICT (raw_key)
     -- This is a NOP, raw_key is the unique field that caused the conflict.
     DO UPDATE SET raw_key = EXCLUDED.raw_key
@@ -178,6 +178,7 @@ WITH genesis_info AS (
 )
 SELECT 
     version, internal_keys.raw_key AS script_key_raw, 
+    internal_keys.tweak AS script_key_tweak,
     internal_keys.key_family AS script_key_fam,
     internal_keys.key_index AS script_key_index, key_fam_info.genesis_sig, 
     key_fam_info.tweaked_fam_key, key_fam_info.raw_key AS fam_key_raw,
@@ -229,7 +230,8 @@ WITH genesis_info AS (
     WHERE sigs.gen_asset_id IN (SELECT gen_asset_id FROM genesis_info)
 )
 SELECT 
-    assets.asset_id, version, internal_keys.raw_key AS script_key_raw, 
+    assets.asset_id, version, internal_keys.raw_key AS script_key_raw,
+    internal_keys.tweak AS script_key_tweak,
     internal_keys.key_family AS script_key_fam,
     internal_keys.key_index AS script_key_index, key_fam_info.genesis_sig, 
     key_fam_info.tweaked_fam_key, key_fam_info.raw_key AS fam_key_raw,
