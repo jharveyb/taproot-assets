@@ -421,9 +421,9 @@ func dbAssetsToChainAssets(dbAssets []ConfirmedAsset,
 func constraintsToDbFilter(query *AssetQueryFilters) QueryAssetFilters {
 	var assetFilter QueryAssetFilters
 	if query != nil {
-		if query.Amt != 0 {
+		if query.MinAmt != 0 {
 			assetFilter.MinAmt = sql.NullInt64{
-				Int64: int64(query.Amt),
+				Int64: int64(query.MinAmt),
 				Valid: true,
 			}
 		}
@@ -435,6 +435,7 @@ func constraintsToDbFilter(query *AssetQueryFilters) QueryAssetFilters {
 			famKey := query.FamilyKey.SerializeCompressed()
 			assetFilter.KeyFamFilter = famKey
 		}
+		// TODO(roasbeef): only want to allow asset ID or other and not both?
 	}
 
 	return assetFilter
@@ -912,6 +913,7 @@ func (a *AssetStore) SelectCommitment(
 
 	// First, we'll map the commitment constraints to our database query
 	// filters.
+	//var assetFilter QueryAssetFilters
 	assetFilter := constraintsToDbFilter(&AssetQueryFilters{
 		constraints,
 	})
@@ -935,8 +937,14 @@ func (a *AssetStore) SelectCommitment(
 		// each of the assets above.
 		for _, matchingAsset := range matchingAssets {
 			anchorPoint := matchingAsset.AnchorOutpoint
+			anchorPointBytes, err := encodeOutpoint(
+				matchingAsset.AnchorOutpoint,
+			)
+			if err != nil {
+				return err
+			}
 			outpointQuery := QueryAssetFilters{
-				AnchorPoint: anchorPoint,
+				AnchorPoint: anchorPointBytes,
 			}
 
 			anchoredAssets, err := queryChainAssets(
@@ -951,7 +959,7 @@ func (a *AssetStore) SelectCommitment(
 			// In addition to the assets anchored at the target
 			// UTXO, we'll also fetch the managed UTXO itself.
 			anchorUTXO, err := q.FetchManagedUTXO(ctx, UtxoQuery{
-				Outpoint: anchorPoint,
+				Outpoint: anchorPointBytes,
 			})
 			if err != nil {
 				return err

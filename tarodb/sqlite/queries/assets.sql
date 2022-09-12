@@ -266,7 +266,7 @@ JOIN chain_txns txns
 -- make the entire statement evaluate to true, if none of these extra args are
 -- specified.
 WHERE (
-    assets.amount = COALESCE(sqlc.narg('min_amt'), assets.amount)
+    assets.amount >= COALESCE(sqlc.narg('min_amt'), assets.amount)
 );
 
 -- TODO(roasbeef): join on managed utxo ID

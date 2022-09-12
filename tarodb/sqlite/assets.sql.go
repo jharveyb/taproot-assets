@@ -1271,7 +1271,7 @@ JOIN managed_utxos utxos
 JOIN chain_txns txns
     ON utxos.txn_id = txns.txn_id
 WHERE (
-    assets.amount = COALESCE($2, assets.amount)
+    assets.amount >= COALESCE($2, assets.amount)
 )
 `
 

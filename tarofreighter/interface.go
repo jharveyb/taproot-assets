@@ -24,9 +24,9 @@ type CommitmentConstraints struct {
 	// AssetID is the asset ID that needs to be satisfied.
 	AssetID *asset.ID
 
-	// Amt is the minimum amount that an asset commitment needs to hold to
-	// satisfy the constraints.
-	Amt uint64
+	// MinAmt is the minimum amount that an asset commitment needs to hold
+	// to satisfy the constraints.
+	MinAmt uint64
 }
 
 // AnchoredCommitment is the response to satisfying the set of
