@@ -982,9 +982,10 @@ func (a *AssetStore) SelectCommitment(
 	for anchorPoint, anchoredAssets := range chainAnchorToAssets {
 		// First, we need to group each of the assets according to
 		// their asset.
-		assetsByID := make(map[asset.ID]*asset.Asset)
+		assetsByID := make(map[asset.ID][]*asset.Asset)
 		for _, asset := range anchoredAssets {
-			assetsByID[asset.ID()] = asset.Asset
+			assetID := asset.ID()
+			assetsByID[assetID] = append(assetsByID[assetID], asset.Asset)
 		}
 
 		// Now that we have each asset grouped by their asset ID, we
@@ -992,7 +993,7 @@ func (a *AssetStore) SelectCommitment(
 		assetCommitments := make(map[asset.ID]*commitment.AssetCommitment)
 		for assetID, assets := range assetsByID {
 			assetCommitment, err := commitment.NewAssetCommitment(
-				assets,
+				assets...,
 			)
 			if err != nil {
 				return nil, err
