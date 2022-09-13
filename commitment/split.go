@@ -7,7 +7,6 @@ import (
 	"errors"
 
 	"github.com/btcsuite/btcd/btcec/v2"
-	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/lightninglabs/taro/asset"
 	"github.com/lightninglabs/taro/mssmt"
@@ -50,7 +49,7 @@ type SplitLocator struct {
 
 	// ScriptKey is the Taproot tweaked key encoding the different spend
 	// conditions possible for the asset split.
-	ScriptKey btcec.PublicKey
+	ScriptKey asset.SerializedKey
 
 	// Amount is the amount of units for the asset split.
 	Amount uint64
@@ -63,7 +62,7 @@ func (l SplitLocator) Hash() [sha256.Size]byte {
 	h := sha256.New()
 	_ = binary.Write(h, binary.BigEndian, l.OutputIndex)
 	_, _ = h.Write(l.AssetID[:])
-	_, _ = h.Write(schnorr.SerializePubKey(&l.ScriptKey))
+	_, _ = h.Write(l.ScriptKey.SchnorrSerialized())
 	return *(*[sha256.Size]byte)(h.Sum(nil))
 }
 
@@ -156,9 +155,13 @@ func NewSplitCommitment(input *asset.Asset, outPoint wire.OutPoint,
 
 		assetSplit := input.Copy()
 		assetSplit.Amount = locator.Amount
+		scriptKey, err := btcec.ParsePubKey(locator.ScriptKey[:])
+		if err != nil {
+			return err
+		}
 		assetSplit.ScriptKey = keychain.KeyDescriptor{
 			// TODO(roasbeef): other info not needed here?
-			PubKey: &locator.ScriptKey,
+			PubKey: scriptKey,
 		}
 		assetSplit.PrevWitnesses = []asset.Witness{{
 			PrevID:          prevID,
