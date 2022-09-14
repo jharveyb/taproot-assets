@@ -465,7 +465,7 @@ func fetchAssetSprouts(ctx context.Context, q PendingAssetStore,
 
 		assetSprout, err := asset.New(
 			assetGenesis, amount, lockTime, relativeLocktime,
-			scriptKey, familyKey,
+			scriptKey, sprout.ScriptKeyTweak, familyKey,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("unable to create new sprout: "+
@@ -718,6 +718,7 @@ func (a *AssetMintingStore) AddSproutsToBatch(ctx context.Context,
 			// key needed to spend this asset.
 			scriptKeyID, err := q.UpsertInternalKey(ctx, InternalKey{
 				RawKey:    asset.ScriptKey.PubKey.SerializeCompressed(),
+				Tweak:     asset.ScriptKeyTweak,
 				KeyFamily: int32(asset.ScriptKey.Family),
 				KeyIndex:  int32(asset.ScriptKey.Index),
 			})

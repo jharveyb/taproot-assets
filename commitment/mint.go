@@ -17,6 +17,9 @@ type AssetDetails struct {
 	// ScriptKey is the Taproot key with ownership of the asset.
 	ScriptKey keychain.KeyDescriptor
 
+	// ScriptKeyTweak is a tweak that was used to tweak the ScriptKey.
+	ScriptKeyTweak []byte
+
 	// Amount is the amount of assets that should be minted for `ScriptKey`.
 	// NOTE: This should be nil when minting `Collectible` assets.
 	Amount *uint64
@@ -68,7 +71,7 @@ func mintAssets(genesis asset.Genesis, familyKey *asset.FamilyKey,
 
 		a, err := asset.New(
 			genesis, amount, mint.LockTime, mint.RelativeLockTime,
-			mint.ScriptKey, familyKey,
+			mint.ScriptKey, mint.ScriptKeyTweak, familyKey,
 		)
 		if err != nil {
 			return nil, err

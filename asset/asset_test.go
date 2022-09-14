@@ -351,15 +351,15 @@ func TestAssetType(t *testing.T) {
 		PubKey: pubKey,
 	}
 
-	normal, err := New(normalGen, 741, 0, 0, desc, nil)
+	normal, err := New(normalGen, 741, 0, 0, desc, nil, nil)
 	require.NoError(t, err)
 	require.EqualValues(t, 741, normal.Amount)
 
-	_, err = New(collectibleGen, 741, 0, 0, desc, nil)
+	_, err = New(collectibleGen, 741, 0, 0, desc, nil, nil)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "amount must be 1 for asset")
 
-	collectible, err := New(collectibleGen, 1, 0, 0, desc, nil)
+	collectible, err := New(collectibleGen, 1, 0, 0, desc, nil, nil)
 	require.NoError(t, err)
 	require.EqualValues(t, 1, collectible.Amount)
 }

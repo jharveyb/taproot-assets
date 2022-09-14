@@ -434,6 +434,9 @@ type Asset struct {
 	// only encode the raw key for the normal script leaf TLV encoding.
 	ScriptKey keychain.KeyDescriptor
 
+	// ScriptKeyTweak is a tweak that was used to tweak the ScriptKey.
+	ScriptKeyTweak []byte
+
 	// FamilyKey is the tweaked public key that is used to associate assets
 	// together across distinct asset IDs, allowing further issuance of the
 	// asset to be made possible.
@@ -442,8 +445,8 @@ type Asset struct {
 
 // New instantiates a new asset with a genesis asset witness.
 func New(genesis Genesis, amount, locktime, relativeLocktime uint64,
-	scriptKey keychain.KeyDescriptor, familyKey *FamilyKey) (*Asset,
-	error) {
+	scriptKey keychain.KeyDescriptor, scriptKeyTweak []byte,
+	familyKey *FamilyKey) (*Asset, error) {
 
 	// Collectible assets can only ever be issued once.
 	if genesis.Type != Normal && amount != 1 {
@@ -466,6 +469,7 @@ func New(genesis Genesis, amount, locktime, relativeLocktime uint64,
 		SplitCommitmentRoot: nil,
 		ScriptVersion:       ScriptV0,
 		ScriptKey:           scriptKey,
+		ScriptKeyTweak:      scriptKeyTweak,
 		FamilyKey:           familyKey,
 	}, nil
 }

@@ -8,6 +8,7 @@ import (
 
 	"github.com/btcsuite/btcd/btcutil"
 	"github.com/btcsuite/btcd/btcutil/psbt"
+	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/lightninglabs/taro/asset"
@@ -44,7 +45,7 @@ const (
 
 	// DefaultTimeout is the default timeout we use for RPC and database
 	// operations.
-	DefaultTimeout = 30 * time.Second
+	DefaultTimeout = 30 * time.Minute
 )
 
 // BatchCaretakerConfig houses all the items that the BatchCaretaker needs to
@@ -319,6 +320,12 @@ func (b *BatchCaretaker) seedlingsToAssetSprouts(ctx context.Context,
 				"key: %w", err)
 		}
 
+		// Tweak the script key BIP0086 style (such that we only commit
+		// to the internal key when signing).
+		scriptKey.PubKey = txscript.ComputeTaprootKeyNoScript(
+			scriptKey.PubKey,
+		)
+
 		var familyKey *asset.FamilyKey
 		// If emission is enabled, then we'll need to generate another
 		// public key, then use that to derive the key family signature
@@ -351,7 +358,7 @@ func (b *BatchCaretaker) seedlingsToAssetSprouts(ctx context.Context,
 		}
 
 		newAsset, err := asset.New(
-			assetGen, amount, 0, 0, scriptKey, familyKey,
+			assetGen, amount, 0, 0, scriptKey, nil, familyKey,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("unable to create new asset: %v",

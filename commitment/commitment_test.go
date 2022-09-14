@@ -86,6 +86,7 @@ func randAsset(t *testing.T, genesis asset.Genesis,
 		keychain.KeyDescriptor{
 			PubKey: pubKey,
 		},
+		nil,
 		familyKey,
 	)
 	require.NoError(t, err)

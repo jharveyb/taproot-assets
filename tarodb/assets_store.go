@@ -266,8 +266,8 @@ func (a *AssetStore) FetchAllAssets(ctx context.Context) ([]*ChainAsset, error) 
 
 	chainAssets := make([]*ChainAsset, len(dbAssets))
 	for i, sprout := range dbAssets {
-		// First, we'll decode the script key which very asset must
-		// specify, and populate the key locator information
+		// First, we'll decode the script key which every asset must
+		// specify, and populate the key locator information.
 		scriptKeyPub, err := btcec.ParsePubKey(sprout.ScriptKeyRaw)
 		if err != nil {
 			return nil, err
@@ -352,7 +352,7 @@ func (a *AssetStore) FetchAllAssets(ctx context.Context) ([]*ChainAsset, error) 
 
 		assetSprout, err := asset.New(
 			assetGenesis, amount, lockTime, relativeLocktime,
-			scriptKey, familyKey,
+			scriptKey, sprout.ScriptKeyTweak, familyKey,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("unable to create new sprout: "+
@@ -721,6 +721,7 @@ func (a *AssetStore) importAssetFromProof(ctx context.Context,
 	scriptKeyBytes := newAsset.ScriptKey.PubKey.SerializeCompressed()
 	scriptKeyID, err := db.UpsertInternalKey(ctx, InternalKey{
 		RawKey:    scriptKeyBytes,
+		Tweak:     newAsset.ScriptKeyTweak,
 		KeyFamily: int32(newAsset.ScriptKey.Family),
 		KeyIndex:  int32(newAsset.ScriptKey.Index),
 	})
