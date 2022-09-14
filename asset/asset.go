@@ -16,6 +16,32 @@ import (
 	"github.com/lightningnetwork/lnd/tlv"
 )
 
+// SerializedKey is a type for representing a public key, serialized in the
+// compressed, 33-byte form.
+type SerializedKey [33]byte
+
+// SchnorrSerialized returns the Schnorr serialized, x-only 32-byte
+// representation of the serialized key.
+func (s SerializedKey) SchnorrSerialized() []byte {
+	return s[1:]
+}
+
+// CopyBytes returns a copy of the underlying array as a byte slice.
+func (s SerializedKey) CopyBytes() []byte {
+	c := make([]byte, 33)
+	copy(c, s[:])
+
+	return c
+}
+
+// ToSerialized serializes a public key in its 33-byte compressed form.
+func ToSerialized(pubKey *btcec.PublicKey) SerializedKey {
+	var serialized SerializedKey
+	copy(serialized[:], pubKey.SerializeCompressed())
+
+	return serialized
+}
+
 // Version denotes the version of the Taro protocol in effect for an asset.
 type Version uint8
 
@@ -147,8 +173,10 @@ type PrevID struct {
 	// TODO(roasbeef): need another ref type for assets w/ a key family?
 
 	// ScriptKey is the previous tweaked Taproot output key committing to
-	// the possible spending conditions of the asset.
-	ScriptKey btcec.PublicKey
+	// the possible spending conditions of the asset. PrevID is being used
+	// as map keys, so we want to only use data types with fixed and
+	// comparable content, which a btcec.PublicKey might not be.
+	ScriptKey SerializedKey
 }
 
 // Hash returns the SHA-256 hash of all items encapsulated by PrevID.
@@ -156,7 +184,7 @@ func (id PrevID) Hash() [sha256.Size]byte {
 	h := sha256.New()
 	_ = wire.WriteOutPoint(h, 0, 0, &id.OutPoint)
 	_, _ = h.Write(id.ID[:])
-	_, _ = h.Write(schnorr.SerializePubKey(&id.ScriptKey))
+	_, _ = h.Write(id.ScriptKey.SchnorrSerialized())
 	return *(*[sha256.Size]byte)(h.Sum(nil))
 }
 

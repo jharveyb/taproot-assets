@@ -208,6 +208,26 @@ func IDDecoder(r io.Reader, val any, buf *[8]byte, l uint64) error {
 	return tlv.NewTypeForDecodingErr(val, "ID", l, sha256.Size)
 }
 
+func SerializedKeyEncoder(w io.Writer, val any, buf *[8]byte) error {
+	if t, ok := val.(*SerializedKey); ok {
+		id := [33]byte(*t)
+		return tlv.EBytes33(w, &id, buf)
+	}
+	return tlv.NewTypeForEncodingErr(val, "SerializedKey")
+}
+
+func SerializedKeyDecoder(r io.Reader, val any, buf *[8]byte, l uint64) error {
+	if typ, ok := val.(*SerializedKey); ok {
+		var id [33]byte
+		if err := tlv.DBytes33(r, &id, buf, l); err != nil {
+			return err
+		}
+		*typ = SerializedKey(id)
+		return nil
+	}
+	return tlv.NewTypeForDecodingErr(val, "SerializedKey", l, 33)
+}
+
 func TypeEncoder(w io.Writer, val any, buf *[8]byte) error {
 	if t, ok := val.(*Type); ok {
 		return tlv.EUint8T(w, uint8(*t), buf)
@@ -286,8 +306,7 @@ func PrevIDEncoder(w io.Writer, val any, buf *[8]byte) error {
 		if err := IDEncoder(w, &(**t).ID, buf); err != nil {
 			return err
 		}
-		scriptKey := &(**t).ScriptKey
-		return SchnorrPubKeyEncoder(w, &scriptKey, buf)
+		return SerializedKeyEncoder(w, &(**t).ScriptKey, buf)
 	}
 	return tlv.NewTypeForEncodingErr(val, "*PrevID")
 }
@@ -302,14 +321,11 @@ func PrevIDDecoder(r io.Reader, val any, buf *[8]byte, l uint64) error {
 		if err = IDDecoder(r, &prevID.ID, buf, sha256.Size); err != nil {
 			return err
 		}
-		var scriptKey *btcec.PublicKey
-		err = SchnorrPubKeyDecoder(
-			r, &scriptKey, buf, schnorr.PubKeyBytesLen,
-		)
-		if err != nil {
+		if err = SerializedKeyDecoder(
+			r, &prevID.ScriptKey, buf, 33,
+		); err != nil {
 			return err
 		}
-		prevID.ScriptKey = *scriptKey
 		*typ = &prevID
 		return nil
 	}

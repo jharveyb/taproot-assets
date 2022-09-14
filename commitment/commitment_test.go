@@ -514,8 +514,10 @@ func TestSplitCommitment(t *testing.T) {
 				root := &SplitLocator{
 					OutputIndex: 0,
 					AssetID:     genesisCollectible.ID(),
-					ScriptKey:   *input.ScriptKey.PubKey,
-					Amount:      input.Amount,
+					ScriptKey: asset.ToSerialized(
+						input.ScriptKey.PubKey,
+					),
+					Amount: input.Amount,
 				}
 				return input, root, nil
 			},
@@ -530,8 +532,10 @@ func TestSplitCommitment(t *testing.T) {
 				root := &SplitLocator{
 					OutputIndex: 0,
 					AssetID:     genesisNormal.ID(),
-					ScriptKey:   *input.ScriptKey.PubKey,
-					Amount:      input.Amount,
+					ScriptKey: asset.ToSerialized(
+						input.ScriptKey.PubKey,
+					),
+					Amount: input.Amount,
 				}
 				external := []*SplitLocator{root}
 				return input, root, external
@@ -548,14 +552,18 @@ func TestSplitCommitment(t *testing.T) {
 				root := &SplitLocator{
 					OutputIndex: 0,
 					AssetID:     genesisNormal.ID(),
-					ScriptKey:   *input.ScriptKey.PubKey,
-					Amount:      splitAmount,
+					ScriptKey: asset.ToSerialized(
+						input.ScriptKey.PubKey,
+					),
+					Amount: splitAmount,
 				}
 				external := []*SplitLocator{{
 					OutputIndex: 1,
 					AssetID:     genesisNormal.ID(),
-					ScriptKey:   *input.ScriptKey.PubKey,
-					Amount:      splitAmount,
+					ScriptKey: asset.ToSerialized(
+						input.ScriptKey.PubKey,
+					),
+					Amount: splitAmount,
 				}}
 				return input, root, external
 			},
@@ -572,20 +580,26 @@ func TestSplitCommitment(t *testing.T) {
 				root := &SplitLocator{
 					OutputIndex: 0,
 					AssetID:     genesisNormal.ID(),
-					ScriptKey:   *input.ScriptKey.PubKey,
-					Amount:      1,
+					ScriptKey: asset.ToSerialized(
+						input.ScriptKey.PubKey,
+					),
+					Amount: 1,
 				}
 				external := []*SplitLocator{{
 					OutputIndex: 1,
 					AssetID:     genesisNormal.ID(),
-					ScriptKey:   *randKey(t).PubKey(),
-					Amount:      1,
+					ScriptKey: asset.ToSerialized(
+						randKey(t).PubKey(),
+					),
+					Amount: 1,
 				}, {
 
 					OutputIndex: 2,
 					AssetID:     genesisNormal.ID(),
-					ScriptKey:   *randKey(t).PubKey(),
-					Amount:      1,
+					ScriptKey: asset.ToSerialized(
+						randKey(t).PubKey(),
+					),
+					Amount: 1,
 				}}
 
 				return input, root, external
@@ -603,8 +617,10 @@ func TestSplitCommitment(t *testing.T) {
 				root := &SplitLocator{
 					OutputIndex: 0,
 					AssetID:     genesisNormal.ID(),
-					ScriptKey:   *input.ScriptKey.PubKey,
-					Amount:      1,
+					ScriptKey: asset.ToSerialized(
+						input.ScriptKey.PubKey,
+					),
+					Amount: 1,
 				}
 
 				return input, root, nil
@@ -628,9 +644,11 @@ func TestSplitCommitment(t *testing.T) {
 			// Verify that the asset input is well formed within the
 			// InputSet.
 			prevID := asset.PrevID{
-				OutPoint:  outPoint,
-				ID:        input.Genesis.ID(),
-				ScriptKey: *input.ScriptKey.PubKey,
+				OutPoint: outPoint,
+				ID:       input.Genesis.ID(),
+				ScriptKey: asset.ToSerialized(
+					input.ScriptKey.PubKey,
+				),
 			}
 			require.Contains(t, split.PrevAssets, prevID)
 			prevAsset := split.PrevAssets[prevID]
@@ -638,7 +656,11 @@ func TestSplitCommitment(t *testing.T) {
 
 			// Verify that the root asset was constructed properly.
 			require.Equal(t, root.AssetID, split.RootAsset.Genesis.ID())
-			require.Equal(t, root.ScriptKey, *split.RootAsset.ScriptKey.PubKey)
+			rootScriptKey := split.RootAsset.ScriptKey.PubKey
+			require.Equal(
+				t, root.ScriptKey[:],
+				rootScriptKey.SerializeCompressed(),
+			)
 			require.Equal(t, root.Amount, split.RootAsset.Amount)
 			require.Len(t, split.RootAsset.PrevWitnesses, 1)
 			require.NotNil(t, split.RootAsset.PrevWitnesses[0].PrevID)
@@ -653,7 +675,11 @@ func TestSplitCommitment(t *testing.T) {
 				splitAsset := split.SplitAssets[*l]
 
 				require.Equal(t, l.AssetID, splitAsset.Genesis.ID())
-				require.Equal(t, l.ScriptKey, *splitAsset.ScriptKey.PubKey)
+				splitScriptKey := splitAsset.ScriptKey.PubKey
+				require.Equal(
+					t, l.ScriptKey[:],
+					splitScriptKey.SerializeCompressed(),
+				)
 				require.Equal(t, l.Amount, splitAsset.Amount)
 				require.Len(t, splitAsset.PrevWitnesses, 1)
 				require.NotNil(t, splitAsset.PrevWitnesses[0].PrevID)

@@ -119,11 +119,11 @@ func virtualTxIn(newAsset *asset.Asset, prevAssets commitment.InputSet) (
 			inputsConsumed[*input.PrevID] = struct{}{}
 		}
 
-		// In this context, the set of refrenced inputs should match
+		// In this context, the set of referenced inputs should match
 		// the set of previous assets. This ensures no duplicate inputs
 		// are being spent.
 		//
-		// TODO(roasbeef): make further expliit?
+		// TODO(roasbeef): make further explicit?
 		if len(inputsConsumed) != len(prevAssets) {
 			return nil, nil, ErrInputMismatch
 		}
@@ -237,7 +237,7 @@ func VirtualTx(newAsset *asset.Asset, prevAssets commitment.InputSet) (
 	return virtualTx, inputTree, nil
 }
 
-// virtualTxWithInput returns a copy of the `virtualTx` amended to include all
+// VirtualTxWithInput returns a copy of the `virtualTx` amended to include all
 // input-specific details.
 //
 // This is used to further bind a given witness to the "true" input it spends.
