@@ -469,11 +469,7 @@ func checkPreparedSplitSpend(t *testing.T, spend *taroscript.SpendDelta,
 		spend.InputAssets[prevInput].Amount-addr.Amount,
 	)
 	if spend.InputAssets[prevInput].Amount == addr.Amount {
-		require.Equal(t, spend.NewAsset.Amount, uint64(0))
-		require.Equal(
-			t, asset.ToSerialized(spend.NewAsset.ScriptKey.PubKey),
-			asset.NScriptKey,
-		)
+		require.True(t, spend.NewAsset.IsUnspendable())
 	}
 	receiverStateKey := addr.AssetCommitmentKey()
 	receiverLocator, ok := spend.Locators[receiverStateKey]
@@ -1835,7 +1831,8 @@ func TestProofVerify(t *testing.T) {
 		genesisProofBlob, &proofParams[1],
 	)
 	require.NoError(t, err)
-	receiverFile := proof.NewFile(proof.V0)
+	receiverFile, err := proof.NewFile(proof.V0)
+	require.NoError(t, err)
 	require.NoError(t, receiverFile.Decode(bytes.NewReader(receiverBlob)))
 	_, err = receiverFile.Verify(context.TODO())
 	require.NoError(t, err)
@@ -1849,9 +1846,10 @@ func TestProofVerifyFullValueSplit(t *testing.T) {
 	// Create a proof for the genesis of asset 2.
 	createGenesisProof(t, &state)
 
-	genesisProofFile := proof.NewFile(proof.V0, state.asset2GenesisProof)
+	genesisProofFile, err := proof.NewFile(proof.V0, state.asset2GenesisProof)
+	require.NoError(t, err)
 	var b bytes.Buffer
-	err := genesisProofFile.Encode(&b)
+	err = genesisProofFile.Encode(&b)
 	require.NoError(t, err)
 	genesisProofBlob := b.Bytes()
 
@@ -1897,7 +1895,8 @@ func TestProofVerifyFullValueSplit(t *testing.T) {
 		genesisProofBlob, &proofParams[0],
 	)
 	require.NoError(t, err)
-	senderFile := proof.NewFile(proof.V0)
+	senderFile, err := proof.NewFile(proof.V0)
+	require.NoError(t, err)
 	require.NoError(t, senderFile.Decode(bytes.NewReader(senderBlob)))
 	_, err = senderFile.Verify(context.TODO())
 	require.NoError(t, err)
