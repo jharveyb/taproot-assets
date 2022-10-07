@@ -16,4 +16,8 @@ var testCases = []*testCase{
 		name: "basic send",
 		test: testBasicSend,
 	},
+	{
+		name: "full value send",
+		test: testFullValueSend,
+	},
 }
