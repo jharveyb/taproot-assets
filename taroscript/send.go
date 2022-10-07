@@ -300,7 +300,6 @@ func PrepareAssetSplitSpend(addr address.Taro, prevInput asset.PrevID,
 	// verify that the desired split is possible. We can later regenerate a
 	// split with the final output indexes.
 	//
-	// TODO(jhb): Handle change of 0 amount / splits with no change.
 	if updatedDelta.Locators == nil {
 		updatedDelta.Locators = CreateDummyLocators(
 			[][32]byte{senderStateKey, receiverStateKey},
@@ -323,6 +322,14 @@ func PrepareAssetSplitSpend(addr address.Taro, prevInput asset.PrevID,
 	receiverLocator.ScriptKey = asset.ToSerialized(&addr.ScriptKey)
 	receiverLocator.Amount = addr.Amount
 	updatedDelta.Locators[receiverStateKey] = receiverLocator
+
+	// Enforce an unspendable root split if the split sends the full value
+	// of the input asset.
+	if senderLocator.Amount == 0 &&
+		senderLocator.ScriptKey != asset.NScriptKey {
+
+		return nil, commitment.ErrInvalidScriptKey
+	}
 
 	splitCommitment, err := commitment.NewSplitCommitment(
 		inputAsset, prevInput.OutPoint,
