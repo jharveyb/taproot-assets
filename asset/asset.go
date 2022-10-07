@@ -708,6 +708,13 @@ func (a *Asset) HasSplitCommitmentWitness() bool {
 		witness.SplitCommitment != nil
 }
 
+func (a *Asset) IsUnspendable() bool {
+	if ToSerialized(a.ScriptKey.PubKey) == NScriptKey && a.Amount == 0 {
+		return true
+	}
+	return false
+}
+
 // Copy returns a deep copy of an Asset.
 func (a *Asset) Copy() *Asset {
 	assetCopy := *a

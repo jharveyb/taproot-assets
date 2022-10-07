@@ -2,6 +2,7 @@ package vm
 
 import (
 	"math/rand"
+	"sort"
 	"testing"
 
 	"github.com/btcsuite/btcd/btcec/v2"
@@ -13,6 +14,7 @@ import (
 	"github.com/lightninglabs/taro/taroscript"
 	"github.com/lightningnetwork/lnd/keychain"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/exp/maps"
 )
 
 func randKey(t *testing.T) *btcec.PrivateKey {
@@ -303,46 +305,61 @@ func splitStateTransition(t *testing.T) (*asset.Asset, commitment.SplitSet,
 		splitCommitment.PrevAssets
 }
 
-func splitFullValueStateTransition(t *testing.T) (*asset.Asset,
-	commitment.SplitSet, commitment.InputSet) {
+func splitFullValueStateTransition(t *testing.T, validRootLocator,
+	validRoot bool) stateTransitionFunc {
 
-	privKey := randKey(t)
-	scriptKey := txscript.ComputeTaprootKeyNoScript(privKey.PubKey())
+	return func(t *testing.T) (*asset.Asset, commitment.SplitSet,
+		commitment.InputSet) {
 
-	genesisOutPoint := wire.OutPoint{}
-	genesisAsset := randAsset(t, asset.Normal, *scriptKey)
-	genesisAsset.Amount = 3
+		privKey := randKey(t)
+		scriptKey := txscript.ComputeTaprootKeyNoScript(privKey.PubKey())
 
-	assetID := genesisAsset.Genesis.ID()
-	rootLocator := &commitment.SplitLocator{
-		OutputIndex: 0,
-		AssetID:     assetID,
-		ScriptKey:   asset.NScriptKey,
-		Amount:      0,
+		genesisOutPoint := wire.OutPoint{}
+		genesisAsset := randAsset(t, asset.Normal, *scriptKey)
+		genesisAsset.Amount = 3
+
+		assetID := genesisAsset.Genesis.ID()
+		rootLocator := &commitment.SplitLocator{
+			OutputIndex: 0,
+			AssetID:     assetID,
+			ScriptKey:   asset.NScriptKey,
+			Amount:      0,
+		}
+		externalLocators := []*commitment.SplitLocator{{
+			OutputIndex: 1,
+			AssetID:     assetID,
+			ScriptKey:   asset.ToSerialized(randKey(t).PubKey()),
+			Amount:      3,
+		}}
+		splitCommitment, err := commitment.NewSplitCommitment(
+			genesisAsset, genesisOutPoint, rootLocator,
+			externalLocators...,
+		)
+		require.NoError(t, err)
+
+		if !validRoot {
+			splitCommitment.RootAsset.ScriptKey =
+				asset.NewScriptKey(genesisAsset.ScriptKey.PubKey)
+		}
+
+		if !validRootLocator {
+			splitCommitment.SplitAssets[*rootLocator].Asset.ScriptKey =
+				genesisAsset.ScriptKey
+		}
+
+		virtualTx, _, err := taroscript.VirtualTx(
+			splitCommitment.RootAsset, splitCommitment.PrevAssets,
+		)
+		require.NoError(t, err)
+		newWitness := genTaprootKeySpend(
+			t, *privKey, virtualTx, genesisAsset, 0,
+		)
+		require.NoError(t, err)
+		splitCommitment.RootAsset.PrevWitnesses[0].TxWitness = newWitness
+
+		return splitCommitment.RootAsset, splitCommitment.SplitAssets,
+			splitCommitment.PrevAssets
 	}
-	externalLocators := []*commitment.SplitLocator{{
-		OutputIndex: 1,
-		AssetID:     assetID,
-		ScriptKey:   asset.ToSerialized(randKey(t).PubKey()),
-		Amount:      3,
-	}}
-	splitCommitment, err := commitment.NewSplitCommitment(
-		genesisAsset, genesisOutPoint, rootLocator, externalLocators...,
-	)
-	require.NoError(t, err)
-
-	virtualTx, _, err := taroscript.VirtualTx(
-		splitCommitment.RootAsset, splitCommitment.PrevAssets,
-	)
-	require.NoError(t, err)
-	newWitness := genTaprootKeySpend(
-		t, *privKey, virtualTx, genesisAsset, 0,
-	)
-	require.NoError(t, err)
-	splitCommitment.RootAsset.PrevWitnesses[0].TxWitness = newWitness
-
-	return splitCommitment.RootAsset, splitCommitment.SplitAssets,
-		splitCommitment.PrevAssets
 }
 
 func TestVM(t *testing.T) {
@@ -390,15 +407,25 @@ func TestVM(t *testing.T) {
 		},
 		{
 			name: "split full value state transition",
-			f:    splitFullValueStateTransition,
+			f:    splitFullValueStateTransition(t, true, true),
 			err:  nil,
+		},
+		{
+			name: "invalid unspendable root asset",
+			f:    splitFullValueStateTransition(t, true, false),
+			err:  newErrKind(ErrInvalidRootAsset),
+		},
+		{
+			name: "invalid unspendable root locator",
+			f:    splitFullValueStateTransition(t, false, true),
+			err:  newErrKind(ErrInvalidRootAsset),
 		},
 	}
 
 	for _, testCase := range testCases {
 		success := t.Run(testCase.name, func(t *testing.T) {
 			newAsset, splitSet, inputSet := testCase.f(t)
-			verify := func(splitAsset *commitment.SplitAsset) {
+			verify := func(splitAsset *commitment.SplitAsset) error {
 				vm, err := New(newAsset, splitAsset, inputSet)
 				if err != nil {
 					if testCase.err != nil {
@@ -409,15 +436,28 @@ func TestVM(t *testing.T) {
 						t.Fatal(err)
 					}
 				}
-				err = vm.Execute()
-				require.Equal(t, testCase.err, err)
+				return vm.Execute()
 			}
 			if len(splitSet) == 0 {
-				verify(nil)
+				err := verify(nil)
+				require.Equal(t, testCase.err, err)
 				return
 			}
-			for _, splitAsset := range splitSet {
-				verify(splitAsset)
+			// For splits, sort by ascending value so that we fail
+			// early on invalid zero-value locators.
+			splitAssets := maps.Values(splitSet)
+			sort.Slice(splitAssets, func(i, j int) bool {
+				return splitAssets[i].Asset.Amount <
+					splitAssets[j].Asset.Amount
+			})
+			for _, splitAsset := range splitAssets {
+				err := verify(splitAsset)
+				if err != nil {
+					require.Equal(t, testCase.err, err)
+					return
+				} else {
+					require.Equal(t, testCase.err, err)
+				}
 			}
 		})
 		if !success {
