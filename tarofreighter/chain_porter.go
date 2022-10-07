@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 	"github.com/btcsuite/btcd/btcutil/psbt"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -21,6 +22,7 @@ import (
 	"github.com/lightninglabs/taro/tarogarden"
 	"github.com/lightninglabs/taro/taroscript"
 	"github.com/lightningnetwork/lnd/chainntnfs"
+	"github.com/lightningnetwork/lnd/keychain"
 )
 
 // ChainPorterConfig is the main config for the chain porter.
@@ -650,18 +652,39 @@ func (p *ChainPorter) stateStep(currentPkg sendPackage) (*sendPackage, error) {
 		if err != nil {
 			return nil, err
 		}
-		senderScriptKey, err := p.cfg.KeyRing.DeriveNextKey(
-			ctx, tarogarden.TaroKeyFamily,
-		)
-		if err != nil {
-			return nil, err
-		}
 
-		// We'll assume BIP 86 everywhere, and use the tweaked key from
-		// here on out.
-		currentPkg.SenderScriptKey = asset.NewScriptKeyBIP0086(
-			senderScriptKey,
-		)
+		// If we are sending the full value of the input asset, we will
+		// need to create a split with unspendable change.
+		if inputAsset.Type == asset.Normal && !needsSplit {
+			emptyRootKey, err := btcec.ParsePubKey(
+				asset.NScriptKey[:],
+			)
+			if err != nil {
+				return nil, err
+			}
+
+			currentPkg.SenderScriptKey = asset.ScriptKey{
+				PubKey: emptyRootKey,
+				TweakedScriptKey: &asset.TweakedScriptKey{
+					RawKey: keychain.KeyDescriptor{
+						PubKey: emptyRootKey,
+					},
+				},
+			}
+		} else {
+			senderScriptKey, err := p.cfg.KeyRing.DeriveNextKey(
+				ctx, tarogarden.TaroKeyFamily,
+			)
+			if err != nil {
+				return nil, err
+			}
+
+			// We'll assume BIP 86 everywhere, and use the tweaked key from
+			// here on out.
+			currentPkg.SenderScriptKey = asset.NewScriptKeyBIP0086(
+				senderScriptKey,
+			)
+		}
 
 		// If we need to split (addr amount < input amount), then we'll
 		// transition to prepare the set of splits. If not,then we can
@@ -669,8 +692,7 @@ func (p *ChainPorter) stateStep(currentPkg sendPackage) (*sendPackage, error) {
 		//
 		// TODO(roasbeef): always need to split anyway see:
 		// https://github.com/lightninglabs/taro/issues/121
-		currentPkg.NeedsSplit = needsSplit
-		if needsSplit {
+		if inputAsset.Type == asset.Normal {
 			currentPkg.SendState = SendStatePreparedSplit
 		} else {
 			currentPkg.SendState = SendStatePreparedComplete
