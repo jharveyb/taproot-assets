@@ -54,7 +54,9 @@ var (
 
 	// N is the NUMs point we'll use for unspendable asset script keys.
 	// It was generated via a try-and-increment approach using the phrase
-	// "taro" with SHA2-256.
+	// "taro" with SHA2-256. The code for the try-and-increment approach
+	// can be seen here:
+	// https://github.com/lightninglabs/lightning-node-connect/tree/master/mailbox/numsgen
 	nBytes, _ = hex.DecodeString(
 		"0293bfe90658c79b480114ff6bbeda51b3ec6412deb367a4d41e1403e3cc" +
 			"6583ed",
